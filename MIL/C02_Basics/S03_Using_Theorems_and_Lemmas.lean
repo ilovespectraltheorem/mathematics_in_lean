@@ -44,7 +44,7 @@ example (x : ℝ) : x ≤ x :=
 
 -- Try this.
 example (h₀ : a ≤ b) (h₁ : b < c) (h₂ : c ≤ d) (h₃ : d < e) : a < e := by
-  sorry
+  apply lt_trans (lt_of_lt_of_le (lt_of_le_of_lt h₀ h₁) h₂) h₃
 
 example (h₀ : a ≤ b) (h₁ : b < c) (h₂ : c ≤ d) (h₃ : d < e) : a < e := by
   linarith
@@ -77,7 +77,7 @@ example (h : 1 ≤ a) (h' : b ≤ c) : 2 + a + exp b ≤ 3 * a + exp c := by
 #check add_le_add_right
 
 example (h : a ≤ b) : exp a ≤ exp b := by
-  rw [exp_le_exp]
+  rw[exp_le_exp]
   exact h
 
 example (h₀ : a ≤ b) (h₁ : c < d) : a + exp c + e < b + exp d + e := by
@@ -86,21 +86,40 @@ example (h₀ : a ≤ b) (h₁ : c < d) : a + exp c + e < b + exp d + e := by
     apply exp_lt_exp.mpr h₁
   apply le_refl
 
-example (h₀ : d ≤ e) : c + exp (a + d) ≤ c + exp (a + e) := by sorry
+example (h₀ : d ≤ e) : c + exp (a + d) ≤ c + exp (a + e) := by
+  apply add_le_add
+  . apply le_refl c
+  . apply exp_le_exp.mpr
+    apply add_le_add
+    apply le_refl a
+    apply h₀
 
 example : (0 : ℝ) < 1 := by norm_num
 
 example (h : a ≤ b) : log (1 + exp a) ≤ log (1 + exp b) := by
-  have h₀ : 0 < 1 + exp a := by sorry
+  have h₀ : 0 < 1 + exp a := by
+    have h₁ : (0: ℝ) < 1 := by
+      norm_num
+    have h₂: 0 < exp a := by
+      apply exp_pos
+    simpa using add_lt_add h₁ h₂
   apply log_le_log h₀
-  sorry
+  apply add_le_add
+  apply le_refl 1
+  apply exp_le_exp.mpr
+  apply h
 
 example : 0 ≤ a ^ 2 := by
-  -- apply?
   exact sq_nonneg a
 
 example (h : a ≤ b) : c - exp b ≤ c - exp a := by
-  sorry
+  apply tsub_le_tsub
+  . apply le_refl c
+  . apply exp_le_exp.mpr
+    apply h
+
+example (h : a ≤ b) : c - exp b ≤ c - exp a := by
+  linarith [exp_le_exp.mpr h]
 
 example : 2*a*b ≤ a^2 + b^2 := by
   have h : 0 ≤ a^2 - 2*a*b + b^2
@@ -121,7 +140,9 @@ example : 2*a*b ≤ a^2 + b^2 := by
   linarith
 
 example : |a*b| ≤ (a^2 + b^2)/2 := by
-  sorry
+  apply abs_le.mpr
+  constructor
+  linarith [sq_nonneg (a+b)]
+  linarith [sq_nonneg (a-b)]
 
 #check abs_le'.mpr
-
