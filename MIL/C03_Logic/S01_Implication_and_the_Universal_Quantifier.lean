@@ -30,7 +30,7 @@ variable (h₀ : 0 < δ) (h₁ : δ ≤ 1)
 variable (ha : |a| < δ) (hb : |b| < δ)
 
 #check my_lemma2 h₀ h₁ ha hb
-
+#check lt_of_lt_of_le
 end
 
 theorem my_lemma3 :
@@ -42,10 +42,18 @@ theorem my_lemma4 :
     ∀ {x y ε : ℝ}, 0 < ε → ε ≤ 1 → |x| < ε → |y| < ε → |x * y| < ε := by
   intro x y ε epos ele1 xlt ylt
   calc
-    |x * y| = |x| * |y| := sorry
-    _ ≤ |x| * ε := sorry
-    _ < 1 * ε := sorry
-    _ = ε := sorry
+    |x * y| = |x| * |y| := by
+      rw [abs_mul]
+    _ ≤ |x| * ε := by
+      have h1 := abs_nonneg x
+      have h2 : |y| ≤ ε :=
+        le_of_lt ylt
+      apply mul_le_mul_of_nonneg_left h2 h1
+    _ < 1 * ε := by
+      have h1 := lt_of_lt_of_le xlt ele1
+      apply mul_lt_mul_of_pos_right h1 epos
+    _ = ε := by
+      rw[one_mul]
 
 def FnUb (f : ℝ → ℝ) (a : ℝ) : Prop :=
   ∀ x, f x ≤ a
@@ -63,16 +71,32 @@ example (hfa : FnUb f a) (hgb : FnUb g b) : FnUb (fun x ↦ f x + g x) (a + b) :
   apply hfa
   apply hgb
 
-example (hfa : FnLb f a) (hgb : FnLb g b) : FnLb (fun x ↦ f x + g x) (a + b) :=
-  sorry
+example (hfa : FnLb f a) (hgb : FnLb g b) : FnLb (fun x ↦ f x + g x) (a + b) := by
+  intro x
+  change a + b ≤ f x + g x
+  apply add_le_add
+  apply hfa
+  apply hgb
 
-example (nnf : FnLb f 0) (nng : FnLb g 0) : FnLb (fun x ↦ f x * g x) 0 :=
-  sorry
+example (nnf : FnLb f 0) (nng : FnLb g 0) : FnLb (fun x ↦ f x * g x) 0 := by
+  intro x
+  dsimp
+  have h1 : 0 ≤ f x := by apply nnf
+  have h2 : 0 ≤ g x := by apply nng
+  apply mul_nonneg h1 h2
 
 example (hfa : FnUb f a) (hgb : FnUb g b) (nng : FnLb g 0) (nna : 0 ≤ a) :
-    FnUb (fun x ↦ f x * g x) (a * b) :=
-  sorry
-
+    FnUb (fun x ↦ f x * g x) (a * b) := by
+      intro x
+      dsimp
+      have h1 : g x ≤ b := by apply hgb
+      have h2: 0 ≤ g x := by apply nng
+      have h3: 0 ≤ b := by apply le_trans h2 h1
+      apply mul_le_mul
+      apply hfa
+      apply hgb
+      apply h2
+      apply nna
 end
 
 section
@@ -90,7 +114,6 @@ end
 
 example (f : ℝ → ℝ) (h : Monotone f) : ∀ {a b}, a ≤ b → f a ≤ f b :=
   @h
-
 section
 variable (f g : ℝ → ℝ)
 
@@ -103,11 +126,16 @@ example (mf : Monotone f) (mg : Monotone g) : Monotone fun x ↦ f x + g x := by
 example (mf : Monotone f) (mg : Monotone g) : Monotone fun x ↦ f x + g x :=
   fun _a _b aleb ↦ add_le_add (mf aleb) (mg aleb)
 
-example {c : ℝ} (mf : Monotone f) (nnc : 0 ≤ c) : Monotone fun x ↦ c * f x :=
-  sorry
+example {c : ℝ} (mf : Monotone f) (nnc : 0 ≤ c) : Monotone fun x ↦ c * f x := by
+  intro a b h
+  apply mul_le_mul_of_nonneg_left
+  apply mf h
+  apply nnc
 
-example (mf : Monotone f) (mg : Monotone g) : Monotone fun x ↦ f (g x) :=
-  sorry
+example (mf : Monotone f) (mg : Monotone g) : Monotone fun x ↦ f (g x) := by
+  intro a b h
+  have h: g a ≤ g b := by apply mg h
+  apply mf h
 
 def FnEven (f : ℝ → ℝ) : Prop :=
   ∀ x, f x = f (-x)
@@ -121,16 +149,29 @@ example (ef : FnEven f) (eg : FnEven g) : FnEven fun x ↦ f x + g x := by
     (fun x ↦ f x + g x) x = f x + g x := rfl
     _ = f (-x) + g (-x) := by rw [ef, eg]
 
-
 example (of : FnOdd f) (og : FnOdd g) : FnEven fun x ↦ f x * g x := by
-  sorry
+  intro x
+  dsimp
+  have h1 : f x = -f (-x) := by apply of x
+  have h2 : g x = -g (-x) := by apply og x
+  rw[h1, h2]
+  linarith
 
 example (ef : FnEven f) (og : FnOdd g) : FnOdd fun x ↦ f x * g x := by
-  sorry
+  intro x
+  dsimp
+  have h1 : f x = f (-x) := by apply ef x
+  have h2 : g x = -g (-x) := by apply og x
+  rw[h1, h2]
+  linarith
 
 example (ef : FnEven f) (og : FnOdd g) : FnEven fun x ↦ f (g x) := by
-  sorry
-
+  intro x
+  dsimp
+  have h1: g x = -g (-x) := by apply og x
+  rw[h1]
+  symm
+  apply ef (g (-x))
 end
 
 section
@@ -144,8 +185,11 @@ example : s ⊆ s := by
 theorem Subset.refl : s ⊆ s := fun _x xs ↦ xs
 
 theorem Subset.trans : r ⊆ s → s ⊆ t → r ⊆ t := by
-  sorry
-
+  intro h1 h2 x hx
+  have h3: x ∈ r → x ∈ s := by apply h1
+  have h4: x ∈ s → x ∈ t := by apply h2
+  apply h3 at hx
+  apply h4 at hx
 end
 
 section
@@ -155,9 +199,10 @@ variable (s : Set α) (a b : α)
 def SetUb (s : Set α) (a : α) :=
   ∀ x, x ∈ s → x ≤ a
 
-example (h : SetUb s a) (h' : a ≤ b) : SetUb s b :=
-  sorry
-
+example (h : SetUb s a) (h' : a ≤ b) : SetUb s b := by
+  intro x hx
+  apply h at hx
+  apply le_trans hx h'
 end
 
 section
@@ -169,12 +214,17 @@ example (c : ℝ) : Injective fun x ↦ x + c := by
   exact (add_left_inj c).mp h'
 
 example {c : ℝ} (h : c ≠ 0) : Injective fun x ↦ c * x := by
-  sorry
+  intro x y h1
+  dsimp at h1
+  apply mul_left_cancel₀ h h1
 
 variable {α : Type*} {β : Type*} {γ : Type*}
 variable {g : β → γ} {f : α → β}
 
 example (injg : Injective g) (injf : Injective f) : Injective fun x ↦ g (f x) := by
-  sorry
-
+  intro x y h
+  dsimp at h
+  apply injg at h
+  apply injf at h
+  exact h
 end
